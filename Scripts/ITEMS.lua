@@ -603,54 +603,47 @@ end
 function ITEMS.OnInit()
     ITEMS.items = {}
     ITEMS.runtimeCandidates = {}
-    ITEMS.lastLoadMessage = ""
+    ITEMS.lastLoadMessage = "Starting..."
     ITEMS.lastSource = "init"
     local seen = {}
 
     local loadedFolder = nil
-    local loadedMode = nil
     local files = nil
-    local triedFolders = {}
     
     for _, folder in ipairs(getCandidateFolders()) do
-        table.insert(triedFolders, folder)
-        
         local tryFiles = getXmlFiles(folder)
         if tryFiles ~= nil and tryFiles.Length > 0 then
             loadedFolder = folder
             files = tryFiles
-            loadedMode = "direct"
             break
         end
     end
 
     if files == nil then
-        setStatus("No XMLs found", "none")
-    else
-        local firstChars = ""
-        for i = 0, files.Length - 1 do
-            local fullPath = files[i]
-            local file = io.open(fullPath, "rb")
-            if file ~= nil then
-                local content = normalizeContent(file:read("*a"))
-                file:close()
-                
-                -- Get first 5 chars from first file
-                if i == 0 and content ~= nil and content ~= "" then
-                    firstChars = content:sub(1, 5)
-                end
-                
-                if content ~= nil and content ~= "" then
-                    parseXmlNames(content, seen)
-                end
+        ITEMS.lastLoadMessage = "No XML files found"
+        return
+    end
+    
+    local firstChars = ""
+    for i = 0, files.Length - 1 do
+        local fullPath = files[i]
+        local file = io.open(fullPath, "rb")
+        if file ~= nil then
+            local content = normalizeContent(file:read("*a"))
+            file:close()
+            
+            if i == 0 and content ~= nil and content ~= "" then
+                firstChars = content:sub(1, 5)
+            end
+            
+            if content ~= nil and content ~= "" then
+                parseXmlNames(content, seen)
             end
         end
-
-        -- Always show this info
-        setStatus("Files:" .. files.Length .. " First5:" .. firstChars, "xml")
     end
 
-    print("[ITEMS] Total items loaded: " .. tostring(#ITEMS.items))
+    ITEMS.lastLoadMessage = "Files:" .. tostring(files.Length) .. " First5:[" .. firstChars .. "]"
+    ITEMS.lastSource = "xml"
 end
 
 function ITEMS.EnsureLoaded()
