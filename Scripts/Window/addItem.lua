@@ -29,6 +29,52 @@ function addItem:Init(window)
         return tostring(value)
     end
 
+    local function tryGetTypeName(value)
+        local typeName = ""
+        pcall(function()
+            local t = value:GetType()
+            if t ~= nil then
+                typeName = tostring(t.FullName)
+            end
+        end)
+        return typeName
+    end
+
+    local function describeValue(value)
+        if value == nil then
+            return ""
+        end
+
+        local valStr = tostring(value)
+        local typeName = tryGetTypeName(value)
+
+        if valStr ~= "" and valStr ~= "LOST ITEM" then
+            return valStr
+        end
+
+        -- Try to extract nested fields/properties from objects that stringify poorly
+        if type(value) ~= "string" then
+            local nameKeys = {"Name", "name", "Label", "label", "Title", "title", "DefName", "ID", "Key"}
+            for _, key in ipairs(nameKeys) do
+                local subVal = nil
+                pcall(function()
+                    subVal = value[key]
+                end)
+                if subVal ~= nil then
+                    local subStr = tostring(subVal)
+                    if subStr ~= "" and subStr ~= "LOST ITEM" then
+                        return key .. "=" .. subStr
+                    end
+                end
+            end
+        end
+
+        if typeName ~= "" then
+            return valStr .. " (Type:" .. typeName .. ")"
+        end
+        return valStr
+    end
+
     local function getAllProperties(defObj)
         local props = {}
         if defObj == nil then
@@ -63,7 +109,7 @@ function addItem:Init(window)
                         end)
                         
                         if okRead and value ~= nil then
-                            local valStr = tostring(value)
+                            local valStr = describeValue(value)
                             table.insert(props, {name = "P:" .. propName, value = valStr})
                         end
                     end
@@ -80,7 +126,7 @@ function addItem:Init(window)
                     value = field:GetValue(defObj)
                 end)
                 if okRead and value ~= nil then
-                    local valStr = tostring(value)
+                    local valStr = describeValue(value)
                     table.insert(props, {name = "F:" .. fieldName, value = valStr})
                 end
             end
