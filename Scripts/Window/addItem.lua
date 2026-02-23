@@ -54,25 +54,21 @@ function addItem:Init(window)
         return string.format("ID:%s TN:%s N:%s P:%s T:%s", clipText(itemName, 20), clipText(tn, 16), clipText(dn, 16), clipText(pn, 16), clipText(tx, 16))
     end
 
-    local function dumpAllProperties(defObj, itemName)
+    local function getAllProperties(defObj)
+        local props = {}
         if defObj == nil then
-            return "Def is nil for " .. itemName
+            return props
         end
 
-        local props = {}
-        local allPropsForLog = {}
         local BindingFlags = CS.System.Reflection.BindingFlags
         if BindingFlags == nil then
-            return "Reflection not available"
+            return props
         end
 
-        local ok = pcall(function()
+        pcall(function()
             local flags = BindingFlags.Instance | BindingFlags.Public
             local defType = defObj:GetType()
             local properties = defType:GetProperties(flags)
-            
-            print("=== DUMP ALL PROPERTIES FOR: " .. itemName .. " ===")
-            print("Total properties: " .. tostring(properties.Length))
             
             for i = 0, properties.Length - 1 do
                 local prop = properties[i]
@@ -92,35 +88,16 @@ function addItem:Init(window)
                         
                         if okRead and value ~= nil then
                             local valStr = tostring(value)
-                            local shortVal = valStr
-                            if string.len(valStr) > 20 then
-                                shortVal = string.sub(valStr, 1, 20) .. "..."
-                            end
-                            
-                            -- Log completo no console
-                            print("  " .. propName .. " = " .. valStr)
-                            
-                            -- Apenas primeiras 6 propriedades para a UI
-                            if #props < 6 then
-                                table.insert(props, propName .. "=" .. shortVal)
-                            end
+                            table.insert(props, {name = propName, value = valStr})
                         else
-                            print("  " .. propName .. " = null")
-                            if #props < 6 then
-                                table.insert(props, propName .. "=null")
-                            end
+                            table.insert(props, {name = propName, value = "null"})
                         end
                     end
                 end
             end
-            print("=== END PROPERTY DUMP ===")
         end)
 
-        if not ok or #props == 0 then
-            return "Failed to dump properties for " .. itemName
-        end
-
-        return itemName .. ": " .. table.concat(props, " | ") .. " [+check log]"
+        return props
     end
 
     local function setText(target, value)
@@ -206,10 +183,11 @@ function addItem:Init(window)
     end
 
     self.allItems = {}
+    self.debugProps = {}
+    self.debugPropIndex = 1
+    self.debugItemName = ""
     local skippedTemplate = 0
     local lostLabelCount = 0
-    local firstDef = nil
-    local firstDefName = nil
     
     for i, name in ipairs(ITEMS.items) do
         if name ~= "" and not isTemplateDefName(name) then
@@ -218,12 +196,6 @@ function addItem:Init(window)
                 def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
             end)
             if okDef and def ~= nil then
-                -- Capture first def for property dump
-                if firstDef == nil then
-                    firstDef = def
-                    firstDefName = name
-                end
-                
                 local thingName = readField(def, "ThingName")
                 if thingName == nil or thingName == "" or thingName == "LOST ITEM" then
                     lostLabelCount = lostLabelCount + 1
@@ -256,12 +228,7 @@ function addItem:Init(window)
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        -- Show property dump of first item instead of stats
-        if firstDef ~= nil then
-            self.pageLabel3.text = dumpAllProperties(firstDef, firstDefName)
-        else
-            self.pageLabel3.text = string.format("%s Show:%d Lost:%d Tpl:%d", getDiagLabelText(), #self.allItems, lostLabelCount, skippedTemplate)
-        end
+        self.pageLabel3.text = string.format("%s Show:%d Lost:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, lostLabelCount, skippedTemplate)
     end
 
     self.displayedItems = self.allItems
@@ -318,12 +285,64 @@ function addItem:Init(window)
             self.selectedItemName = data.itemName
             self.titleName = data.title
             self:LoadPage(self.currentPage)
-            self.pageLabel3.text = data.debug or string.format("Current selected item: %s", data.title)
+            
+            -- Load all properties of this item
+            local def = nil
+            local okDef = pcall(function()
+                def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, data.itemName)
+            end)
+            
+            if okDef and def ~= nil then
+                self.debugProps = getAllProperties(def)
+                self.debugPropIndex = 1
+                self.debugItemName = data.itemName
+                self:ShowDebugProps()
+            else
+                self.pageLabel3.text = "Failed to load def for " .. data.itemName
+            end
         else
             print("Clicked item has no bound data")
         end
     end)
+    
+    -- Click on label to cycle through properties
+    if self.pageLabel3 and self.pageLabel3.onClick then
+        self.pageLabel3.onClick:Add(function()
+            if #self.debugProps > 0 then
+                self.debugPropIndex = self.debugPropIndex + 3
+                if self.debugPropIndex > #self.debugProps then
+                    self.debugPropIndex = 1
+                end
+                self:ShowDebugProps()
+            end
+        end)
+    end
+    
     self:LoadPage(1)
+end
+
+function addItem:ShowDebugProps()
+    if #self.debugProps == 0 then
+        self.pageLabel3.text = "No properties loaded"
+        return
+    end
+    
+    local propsToShow = {}
+    for i = 0, 2 do
+        local idx = self.debugPropIndex + i
+        if idx <= #self.debugProps then
+            local prop = self.debugProps[idx]
+            local val = prop.value
+            if string.len(val) > 30 then
+                val = string.sub(val, 1, 30) .. "..."
+            end
+            table.insert(propsToShow, string.format("%s=%s", prop.name, val))
+        end
+    end
+    
+    local total = #self.debugProps
+    local showing = string.format("[%d-%d/%d]", self.debugPropIndex, math.min(self.debugPropIndex + 2, total), total)
+    self.pageLabel3.text = showing .. " " .. table.concat(propsToShow, " | ") .. " (Click to see more)"
 end
 
 function addItem:BntAddItem()
