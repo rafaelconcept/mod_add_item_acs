@@ -19,7 +19,7 @@ end
 
 function tbMod:OnInit()
     print("[XiuXian Assistant] Initialization complete")
-    ITEMS.OnInit()
+    XIAUXIAN_ITEMS.OnInit()
     self.isOpen = false
     self._bridgeRegistered = false
     self:RegisterBridgeHotkey()

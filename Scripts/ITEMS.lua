@@ -5,7 +5,7 @@ local Path = cs.System.IO.Path
 local Application = cs.UnityEngine.Application
 local SearchOption = cs.System.IO.SearchOption
 
-ITEMS = { items = {} }
+XIAUXIAN_ITEMS = { items = {} }
 
 local function combinePath(a, b, c, d)
     local p = Path.Combine(a, b)
@@ -118,14 +118,14 @@ local function extractThingDefName(filePath)
 
     local count = 0
     for name in content:gmatch('<ThingDef[^>]-Name="([^"]+)"') do
-        table.insert(ITEMS.items, name)
+        table.insert(XIAUXIAN_ITEMS.items, name)
         count = count + 1
     end
 end
 
 
-function ITEMS.OnInit()
-    ITEMS.items = {}
+function XIAUXIAN_ITEMS.OnInit()
+    XIAUXIAN_ITEMS.items = {}
     local seen = {}
 
     local loadedFolder = nil
@@ -166,12 +166,12 @@ function ITEMS.OnInit()
             for name in content:gmatch('<ThingDef[^>]-Name="([^"]+)"') do
                 if not seen[name] then
                     seen[name] = true
-                    table.insert(ITEMS.items, name)
+                    table.insert(XIAUXIAN_ITEMS.items, name)
                 end
             end
         end
     end
 
     print("[ITEMS] Loaded from: " .. tostring(loadedFolder) .. " (" .. tostring(loadedMode) .. ")")
-    print("[ITEMS] Loaded successfully, total items: " .. tostring(#ITEMS.items))
+    print("[ITEMS] Loaded successfully, total items: " .. tostring(#XIAUXIAN_ITEMS.items))
 end

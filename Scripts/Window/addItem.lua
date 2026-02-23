@@ -79,13 +79,18 @@ function addItem:Init(window)
     self.inputNum.text = "1"
 
     self.allItems = {}
-    for i, name in ipairs(ITEMS.items) do
+    for i, name in ipairs(XIAUXIAN_ITEMS.items) do
         if name ~= "" then
-            table.insert(self.allItems, {
-                icon = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name).TexPath or "thing://2,Item_SmallBell,Item_IronBlock",
-                title = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name).ThingName,
-                itemName = name,
-            })
+            local okDef, thingDef = pcall(function()
+                return ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
+            end)
+            if okDef and thingDef ~= nil then
+                table.insert(self.allItems, {
+                    icon = thingDef.TexPath or "thing://2,Item_SmallBell,Item_IronBlock",
+                    title = thingDef.ThingName or name,
+                    itemName = name,
+                })
+            end
         end
     end
 
@@ -198,27 +203,30 @@ function addItem:CheckXYC(keyX, keyY, count)
     if not keyX or keyX < 1 then
         world:ShowMsgBox("Invalid X coordinate input", "Error")
         self.pageLabel3.text = string.format("Invalid X coordinate input!")
-        return
+        return false
     end
 
     if not keyY or keyY < 1 then
         world:ShowMsgBox("Invalid Y coordinate input", "Error")
         self.pageLabel3.text = string.format("Invalid Y coordinate input!")
-        return
+        return false
     end
 
     if not count or count < 1 then
         world:ShowMsgBox("Please enter a valid positive integer count", "Error")
         self.pageLabel3.text = string.format("Invalid count input!")
-        return
+        return false
     end
 
+    return true
 end
 
 function addItem:BntCheckNearKey()
     local keyX = tonumber(self.inputKeyX.text)
     local keyY = tonumber(self.inputKeyY.text)
-    self:CheckXYC(keyX, keyY, 1)
+    if not self:CheckXYC(keyX, keyY, 1) then
+        return
+    end
     local mapKey = (keyY - 1) + (keyX - 1) * Map.Size
     local thingsData = Map.Things
     local radius = 2
@@ -239,11 +247,17 @@ end
 
 function addItem:IsKeyAddItem()
     local itemName = self.selectedItemName
+    if itemName == nil or itemName == "" then
+        self.pageLabel3.text = string.format("Please select an item first")
+        return
+    end
     local keyX = tonumber(self.inputKeyX.text)
     local keyY = tonumber(self.inputKeyY.text)
     local count = tonumber(self.inputNum.text)
 
-    self:CheckXYC(keyX, keyY, count)
+    if not self:CheckXYC(keyX, keyY, count) then
+        return
+    end
 
     local maps = World.map
     local found = false
