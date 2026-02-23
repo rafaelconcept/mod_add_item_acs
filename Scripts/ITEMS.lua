@@ -614,9 +614,11 @@ function ITEMS.OnInit()
     local loadedFolder = nil
     local loadedMode = nil
     local files = nil
+    local triedFolders = {}
+    
     for _, folder in ipairs(getCandidateFolders()) do
-        print("[ITEMS] Trying folder:", tostring(folder))
-
+        table.insert(triedFolders, folder)
+        
         local tryFiles = getXmlFiles(folder)
         if tryFiles ~= nil and tryFiles.Length > 0 then
             loadedFolder = folder
@@ -624,12 +626,14 @@ function ITEMS.OnInit()
             loadedMode = "direct"
             break
         end
-
-        -- No recursive scan: only direct files in the folder
     end
 
     if files == nil then
-        setStatus("ThingDef folder not found", "none")
+        local msg = "No XMLs found. Tried " .. tostring(#triedFolders) .. " folders"
+        if #triedFolders > 0 then
+            msg = msg .. ": " .. triedFolders[1]
+        end
+        setStatus(msg, "none")
     else
         for i = 0, files.Length - 1 do
             local fullPath = files[i]
@@ -643,12 +647,12 @@ function ITEMS.OnInit()
         end
 
         if #ITEMS.items > 0 then
-            setStatus("Loaded from xml files: " .. tostring(#ITEMS.items), "xml")
+            setStatus("Loaded " .. tostring(#ITEMS.items) .. " items from: " .. loadedFolder, "xml")
         end
     end
 
     if #ITEMS.items == 0 then
-        setStatus("No item defs loaded", "none")
+        setStatus("No items parsed from " .. tostring(files and files.Length or 0) .. " XMLs", "none")
     end
 
     print("[ITEMS] Loaded from: " .. tostring(loadedFolder) .. " (" .. tostring(loadedMode) .. ")")
