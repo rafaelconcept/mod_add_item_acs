@@ -18,13 +18,6 @@ function addItem:Init(window)
         return false
     end
 
-    local function normalizeDisplayName(defName, thingName)
-        if thingName == nil or thingName == "" or thingName == "LOST ITEM" then
-            return defName
-        end
-        return thingName
-    end
-
     local function readField(obj, fieldName)
         local value = nil
         pcall(function()
@@ -34,24 +27,6 @@ function addItem:Init(window)
             return ""
         end
         return tostring(value)
-    end
-
-    local function clipText(text, maxLen)
-        if text == nil then
-            return ""
-        end
-        if string.len(text) <= maxLen then
-            return text
-        end
-        return string.sub(text, 1, maxLen) .. "..."
-    end
-
-    local function buildDefDebug(itemName, thingName, defName, parentName, texPath)
-        local tn = thingName ~= "" and thingName or "-"
-        local dn = defName ~= "" and defName or "-"
-        local pn = parentName ~= "" and parentName or "-"
-        local tx = texPath ~= "" and texPath or "-"
-        return string.format("ID:%s TN:%s N:%s P:%s T:%s", clipText(itemName, 20), clipText(tn, 16), clipText(dn, 16), clipText(pn, 16), clipText(tx, 16))
     end
 
     local function getAllProperties(defObj)
@@ -186,7 +161,6 @@ function addItem:Init(window)
     self.debugPropIndex = 1
     self.debugItemName = ""
     local skippedTemplate = 0
-    local lostLabelCount = 0
     
     for i, name in ipairs(ITEMS.items) do
         if name ~= "" and not isTemplateDefName(name) then
@@ -195,24 +169,12 @@ function addItem:Init(window)
                 def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
             end)
             if okDef and def ~= nil then
-                local thingName = readField(def, "ThingName")
-                if thingName == nil or thingName == "" or thingName == "LOST ITEM" then
-                    lostLabelCount = lostLabelCount + 1
-                end
-
-                local defName = readField(def, "Name")
-                local parentName = readField(def, "Parent")
-                if parentName == "" then
-                    parentName = readField(def, "ParentName")
-                end
                 local texPath = readField(def, "TexPath")
-                local debugText = buildDefDebug(name, thingName, defName, parentName, texPath)
 
                 table.insert(self.allItems, {
                     icon = texPath ~= "" and texPath or "thing://2,Item_SmallBell,Item_IronBlock",
-                    title = normalizeDisplayName(name, thingName),
+                    title = name,  -- Use internal name directly
                     itemName = name,
-                    debug = debugText,
                 })
             end
         elseif name ~= "" then
@@ -227,7 +189,7 @@ function addItem:Init(window)
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        self.pageLabel3.text = string.format("%s Show:%d Lost:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, lostLabelCount, skippedTemplate)
+        self.pageLabel3.text = string.format("%s Show:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, skippedTemplate)
     end
 
     self.displayedItems = self.allItems
