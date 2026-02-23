@@ -70,6 +70,7 @@ function addItem:Init(window)
             local defType = defObj:GetType()
             local properties = defType:GetProperties(flags)
             
+            -- Get ALL properties without filtering
             for i = 0, properties.Length - 1 do
                 local prop = properties[i]
                 local propName = tostring(prop.Name)
@@ -89,8 +90,6 @@ function addItem:Init(window)
                         if okRead and value ~= nil then
                             local valStr = tostring(value)
                             table.insert(props, {name = propName, value = valStr})
-                        else
-                            table.insert(props, {name = propName, value = "null"})
                         end
                     end
                 end
@@ -270,11 +269,21 @@ function addItem:Init(window)
     end)
 
     self.bntRefresh.onClick:Add(function()
-        if ITEMS ~= nil and ITEMS.OnInit ~= nil then
-            ITEMS.OnInit()
+        -- If debugging props, show next batch
+        if #self.debugProps > 0 then
+            self.debugPropIndex = self.debugPropIndex + 3
+            if self.debugPropIndex > #self.debugProps then
+                self.debugPropIndex = 1
+            end
+            self:ShowDebugProps()
+        else
+            -- Normal refresh behavior
+            if ITEMS ~= nil and ITEMS.OnInit ~= nil then
+                ITEMS.OnInit()
+            end
+            self.pageLabel3.text = getDiagLabelText()
+            self:ArrowButton()
         end
-        self.pageLabel3.text = getDiagLabelText()
-        self:ArrowButton()
     end)
 
     self.list.onClickItem:Add(function(context)
@@ -286,7 +295,7 @@ function addItem:Init(window)
             self.titleName = data.title
             self:LoadPage(self.currentPage)
             
-            -- Load all properties of this item
+            -- Load relevant properties of this item
             local def = nil
             local okDef = pcall(function()
                 def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, data.itemName)
@@ -305,44 +314,33 @@ function addItem:Init(window)
         end
     end)
     
-    -- Click on label to cycle through properties
-    if self.pageLabel3 and self.pageLabel3.onClick then
-        self.pageLabel3.onClick:Add(function()
-            if #self.debugProps > 0 then
-                self.debugPropIndex = self.debugPropIndex + 3
-                if self.debugPropIndex > #self.debugProps then
-                    self.debugPropIndex = 1
-                end
-                self:ShowDebugProps()
-            end
-        end)
-    end
-    
     self:LoadPage(1)
 end
 
 function addItem:ShowDebugProps()
     if #self.debugProps == 0 then
-        self.pageLabel3.text = "No properties loaded"
+        self.pageLabel3.text = "No properties found!"
         return
     end
     
-    local propsToShow = {}
+    local propsText = {}
+    -- Show 3 properties at a time
     for i = 0, 2 do
         local idx = self.debugPropIndex + i
         if idx <= #self.debugProps then
             local prop = self.debugProps[idx]
             local val = prop.value
-            if string.len(val) > 30 then
-                val = string.sub(val, 1, 30) .. "..."
+            if string.len(val) > 20 then
+                val = string.sub(val, 1, 20) .. "..."
             end
-            table.insert(propsToShow, string.format("%s=%s", prop.name, val))
+            table.insert(propsText, string.format("%s=%s", prop.name, val))
         end
     end
     
     local total = #self.debugProps
-    local showing = string.format("[%d-%d/%d]", self.debugPropIndex, math.min(self.debugPropIndex + 2, total), total)
-    self.pageLabel3.text = showing .. " " .. table.concat(propsToShow, " | ") .. " (Click to see more)"
+    local endIdx = math.min(self.debugPropIndex + 2, total)
+    local header = string.format("[%d-%d/%d]", self.debugPropIndex, endIdx, total)
+    self.pageLabel3.text = header .. " " .. table.concat(propsText, " | ") .. " (Refresh=Next)"
 end
 
 function addItem:BntAddItem()
