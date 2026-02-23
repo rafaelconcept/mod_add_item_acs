@@ -269,9 +269,9 @@ function addItem:Init(window)
     end)
 
     self.bntRefresh.onClick:Add(function()
-        -- If debugging props, show next batch
+        -- If debugging props, show next property
         if #self.debugProps > 0 then
-            self.debugPropIndex = self.debugPropIndex + 3
+            self.debugPropIndex = self.debugPropIndex + 1
             if self.debugPropIndex > #self.debugProps then
                 self.debugPropIndex = 1
             end
@@ -323,24 +323,16 @@ function addItem:ShowDebugProps()
         return
     end
     
-    local propsText = {}
-    -- Show 3 properties at a time
-    for i = 0, 2 do
-        local idx = self.debugPropIndex + i
-        if idx <= #self.debugProps then
-            local prop = self.debugProps[idx]
-            local val = prop.value
-            if string.len(val) > 20 then
-                val = string.sub(val, 1, 20) .. "..."
-            end
-            table.insert(propsText, string.format("%s=%s", prop.name, val))
-        end
+    -- Show only 1 property at a time
+    local prop = self.debugProps[self.debugPropIndex]
+    local val = prop.value
+    if string.len(val) > 50 then
+        val = string.sub(val, 1, 50) .. "..."
     end
     
     local total = #self.debugProps
-    local endIdx = math.min(self.debugPropIndex + 2, total)
-    local header = string.format("[%d-%d/%d]", self.debugPropIndex, endIdx, total)
-    self.pageLabel3.text = header .. " " .. table.concat(propsText, " | ") .. " (Refresh=Next)"
+    local header = string.format("[%d/%d]", self.debugPropIndex, total)
+    self.pageLabel3.text = header .. " " .. prop.name .. " = " .. val .. " (Refresh=Next)"
 end
 
 function addItem:BntAddItem()
