@@ -1,0 +1,22 @@
+{
+    "Name": "XiuXianAssistant",
+    "DisplayName": "XiuXian Assistant",
+    "GameVersion": 1.268,
+    "Version": 1.2,
+    "Desc": "[Language]\r\n    English\r\n[Author]\r\n    Mizang, rafaelconcept\r\n[Focus]\r\n    Android\r\n[Description]\r\nA helper tool for Amazing Cultivation Simulator. It provides item adding features, allowing manual coordinate placement or direct insertion into selected storage. Also adds character attribute editing. Hotkey: F8.",
+    "Author": "Mizang, rafaelconcept",
+    "UIPackage": "UI/XiuXianAssistant",
+    "ID": "3494099801",
+    "Flag": 629662381,
+    "Tags": [
+        "Function",
+        "Usability",
+        "ExcludeRealmsHeaven"
+    ],
+    "IncreasedDesc": "Added character attribute editing",
+    "IsInsideCreat": false,
+    "Previews": [
+        "2.png"
+    ],
+    "ParentModInfo": null
+}
