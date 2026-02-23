@@ -54,6 +54,75 @@ function addItem:Init(window)
         return string.format("ID:%s TN:%s N:%s P:%s T:%s", clipText(itemName, 20), clipText(tn, 16), clipText(dn, 16), clipText(pn, 16), clipText(tx, 16))
     end
 
+    local function dumpAllProperties(defObj, itemName)
+        if defObj == nil then
+            return "Def is nil for " .. itemName
+        end
+
+        local props = {}
+        local allPropsForLog = {}
+        local BindingFlags = CS.System.Reflection.BindingFlags
+        if BindingFlags == nil then
+            return "Reflection not available"
+        end
+
+        local ok = pcall(function()
+            local flags = BindingFlags.Instance | BindingFlags.Public
+            local defType = defObj:GetType()
+            local properties = defType:GetProperties(flags)
+            
+            print("=== DUMP ALL PROPERTIES FOR: " .. itemName .. " ===")
+            print("Total properties: " .. tostring(properties.Length))
+            
+            for i = 0, properties.Length - 1 do
+                local prop = properties[i]
+                local propName = tostring(prop.Name)
+                local canRead = false
+                pcall(function() canRead = prop.CanRead end)
+                
+                if canRead then
+                    local indexParams = 0
+                    pcall(function() indexParams = prop:GetIndexParameters().Length end)
+                    
+                    if indexParams == 0 then
+                        local value = nil
+                        local okRead = pcall(function()
+                            value = prop:GetValue(defObj, nil)
+                        end)
+                        
+                        if okRead and value ~= nil then
+                            local valStr = tostring(value)
+                            local shortVal = valStr
+                            if string.len(valStr) > 20 then
+                                shortVal = string.sub(valStr, 1, 20) .. "..."
+                            end
+                            
+                            -- Log completo no console
+                            print("  " .. propName .. " = " .. valStr)
+                            
+                            -- Apenas primeiras 6 propriedades para a UI
+                            if #props < 6 then
+                                table.insert(props, propName .. "=" .. shortVal)
+                            end
+                        else
+                            print("  " .. propName .. " = null")
+                            if #props < 6 then
+                                table.insert(props, propName .. "=null")
+                            end
+                        end
+                    end
+                end
+            end
+            print("=== END PROPERTY DUMP ===")
+        end)
+
+        if not ok or #props == 0 then
+            return "Failed to dump properties for " .. itemName
+        end
+
+        return itemName .. ": " .. table.concat(props, " | ") .. " [+check log]"
+    end
+
     local function setText(target, value)
         if target == nil then
             return
@@ -139,6 +208,9 @@ function addItem:Init(window)
     self.allItems = {}
     local skippedTemplate = 0
     local lostLabelCount = 0
+    local firstDef = nil
+    local firstDefName = nil
+    
     for i, name in ipairs(ITEMS.items) do
         if name ~= "" and not isTemplateDefName(name) then
             local def = nil
@@ -146,6 +218,12 @@ function addItem:Init(window)
                 def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
             end)
             if okDef and def ~= nil then
+                -- Capture first def for property dump
+                if firstDef == nil then
+                    firstDef = def
+                    firstDefName = name
+                end
+                
                 local thingName = readField(def, "ThingName")
                 if thingName == nil or thingName == "" or thingName == "LOST ITEM" then
                     lostLabelCount = lostLabelCount + 1
@@ -178,7 +256,12 @@ function addItem:Init(window)
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        self.pageLabel3.text = string.format("%s Show:%d Lost:%d Tpl:%d", getDiagLabelText(), #self.allItems, lostLabelCount, skippedTemplate)
+        -- Show property dump of first item instead of stats
+        if firstDef ~= nil then
+            self.pageLabel3.text = dumpAllProperties(firstDef, firstDefName)
+        else
+            self.pageLabel3.text = string.format("%s Show:%d Lost:%d Tpl:%d", getDiagLabelText(), #self.allItems, lostLabelCount, skippedTemplate)
+        end
     end
 
     self.displayedItems = self.allItems
