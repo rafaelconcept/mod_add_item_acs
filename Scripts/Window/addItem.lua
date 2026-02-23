@@ -1,6 +1,13 @@
 addItem = {}
 
 function addItem:Init(window)
+    local function getDiagLabelText()
+        if ITEMS ~= nil and ITEMS.GetUILabel ~= nil then
+            return ITEMS.GetUILabel()
+        end
+        return "Defs:0 Src:? Cand:0"
+    end
+
     local function setText(target, value)
         if target == nil then
             return
@@ -79,20 +86,21 @@ function addItem:Init(window)
     self.inputNum.text = "1"
 
     local loadedCount = 0
-    if XIAUXIAN_ITEMS ~= nil and XIAUXIAN_ITEMS.EnsureLoaded ~= nil then
-        loadedCount = XIAUXIAN_ITEMS.EnsureLoaded()
+    if ITEMS ~= nil and ITEMS.EnsureLoaded ~= nil then
+        loadedCount = ITEMS.EnsureLoaded()
     end
 
     self.allItems = {}
-    for i, name in ipairs(XIAUXIAN_ITEMS.items) do
+    for i, name in ipairs(ITEMS.items) do
         if name ~= "" then
-            local okDef, thingDef = pcall(function()
-                return ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
+            local def = nil
+            local okDef = pcall(function()
+                def = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, name)
             end)
-            if okDef and thingDef ~= nil then
+            if okDef and def ~= nil then
                 table.insert(self.allItems, {
-                    icon = thingDef.TexPath or "thing://2,Item_SmallBell,Item_IronBlock",
-                    title = thingDef.ThingName or name,
+                    icon = def.TexPath or "thing://2,Item_SmallBell,Item_IronBlock",
+                    title = def.ThingName or name,
                     itemName = name,
                 })
             end
@@ -100,7 +108,13 @@ function addItem:Init(window)
     end
 
     if #self.allItems == 0 then
-        self.pageLabel3.text = string.format("No valid item definitions loaded (%d). Open this window after entering a save.", loadedCount)
+        local msg = "No item defs loaded"
+        if ITEMS ~= nil and ITEMS.lastLoadMessage ~= nil and ITEMS.lastLoadMessage ~= "" then
+            msg = ITEMS.lastLoadMessage
+        end
+        self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
+    else
+        self.pageLabel3.text = getDiagLabelText()
     end
 
     self.displayedItems = self.allItems
@@ -142,6 +156,10 @@ function addItem:Init(window)
     end)
 
     self.bntRefresh.onClick:Add(function()
+        if ITEMS ~= nil and ITEMS.OnInit ~= nil then
+            ITEMS.OnInit()
+        end
+        self.pageLabel3.text = getDiagLabelText()
         self:ArrowButton()
     end)
 
