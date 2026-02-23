@@ -634,7 +634,7 @@ function ITEMS.OnInit()
     end
 
     if files == nil then
-        setStatus("ThingDef folder not found, trying runtime", "runtime")
+        setStatus("ThingDef folder not found", "none")
     else
         for i = 0, files.Length - 1 do
             local fullPath = files[i]
@@ -653,20 +653,6 @@ function ITEMS.OnInit()
 
         if #ITEMS.items > 0 then
             setStatus("Loaded from xml files: " .. tostring(#ITEMS.items), "xml")
-        end
-    end
-
-    if #ITEMS.items == 0 then
-        local runtimeAdded = loadFromThingMgr(seen)
-        if runtimeAdded > 0 then
-            setStatus("Loaded from ThingMgr runtime: " .. tostring(#ITEMS.items), "thingmgr")
-        end
-    end
-
-    if #ITEMS.items == 0 then
-        local scanAdded = loadFromRuntimeTypeScan(seen)
-        if scanAdded > 0 then
-            setStatus("Loaded from type scan runtime: " .. tostring(#ITEMS.items), "typescan")
         end
     end
 
