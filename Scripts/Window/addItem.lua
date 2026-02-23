@@ -75,6 +75,87 @@ function addItem:Init(window)
         return valStr
     end
 
+    local function getDefsContainer()
+        local defs = nil
+        pcall(function()
+            if ThingMgr ~= nil and ThingMgr.GetDefs ~= nil then
+                defs = ThingMgr:GetDefs(CS.XiaWorld.g_emThingType.Item)
+            elseif ThingMgr ~= nil and ThingMgr.Instance ~= nil then
+                defs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
+            end
+        end)
+
+        if defs == nil then
+            pcall(function()
+                if ThingMgr ~= nil and ThingMgr.GetDefs ~= nil then
+                    defs = ThingMgr:GetDefs()
+                elseif ThingMgr ~= nil and ThingMgr.Instance ~= nil then
+                    defs = ThingMgr.Instance:GetDefs()
+                end
+            end)
+        end
+
+        if defs ~= nil then
+            local typed = nil
+            pcall(function()
+                typed = defs[CS.XiaWorld.g_emThingType.Item]
+            end)
+            if typed ~= nil then
+                return typed
+            end
+        end
+        return defs
+    end
+
+    local function getDefsKeys()
+        local keys = {}
+        local defs = getDefsContainer()
+        if defs == nil then
+            return keys
+        end
+
+        local count = 0
+        local hasCount = false
+        pcall(function()
+            count = defs.Count
+            hasCount = true
+        end)
+
+        if hasCount and count > 0 then
+            for i = 0, count - 1 do
+                local element = nil
+                local okElement = pcall(function()
+                    element = defs[i]
+                end)
+                if okElement and element ~= nil then
+                    local key = nil
+                    pcall(function()
+                        key = element.Key
+                    end)
+                    if type(key) == "string" then
+                        table.insert(keys, {name = "K:" .. tostring(i), value = key})
+                    end
+                end
+            end
+        else
+            pcall(function()
+                local enumerator = defs:GetEnumerator()
+                while enumerator:MoveNext() do
+                    local current = enumerator.Current
+                    local key = nil
+                    pcall(function()
+                        key = current.Key
+                    end)
+                    if type(key) == "string" then
+                        table.insert(keys, {name = "K", value = key})
+                    end
+                end
+            end)
+        end
+
+        return keys
+    end
+
     local function getAllProperties(defObj)
         local props = {}
         if defObj == nil then
@@ -276,6 +357,13 @@ function addItem:Init(window)
         self.debugProps = getAllProperties(firstDefFromMgr)
         self.debugPropIndex = 1
         self.debugItemName = "DirectDef[XML[1]]"
+    end
+
+    if #self.debugProps == 0 then
+        -- If def fields are useless, try keys from Defs dictionary
+        self.debugProps = getDefsKeys()
+        self.debugPropIndex = 1
+        self.debugItemName = "DefsKeys"
     end
 
     if #self.debugProps > 0 then
