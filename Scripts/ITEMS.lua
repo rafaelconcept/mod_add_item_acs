@@ -625,46 +625,32 @@ function ITEMS.OnInit()
     end
 
     if files == nil then
-        local msg = "No XMLs. Tried: " .. (triedFolders[1] or "?")
-        setStatus(msg, "none")
+        setStatus("No XMLs found", "none")
     else
-        local totalParsed = 0
-        local filesRead = 0
         local firstChars = ""
         for i = 0, files.Length - 1 do
             local fullPath = files[i]
             local file = io.open(fullPath, "rb")
             if file ~= nil then
-                filesRead = filesRead + 1
                 local content = normalizeContent(file:read("*a"))
                 file:close()
                 
-                -- Get first chars from first file
+                -- Get first 5 chars from first file
                 if i == 0 and content ~= nil and content ~= "" then
-                    firstChars = content:sub(1, 50):gsub("[^%w%s<>/=\"]", "?")
+                    firstChars = content:sub(1, 5)
                 end
                 
                 if content ~= nil and content ~= "" then
-                    local parsed = parseXmlNames(content, seen)
-                    totalParsed = totalParsed + parsed
+                    parseXmlNames(content, seen)
                 end
             end
         end
 
-        if #ITEMS.items > 0 then
-            setStatus("OK: " .. tostring(#ITEMS.items) .. " items from " .. filesRead .. " XMLs", "xml")
-        else
-            local msg = "Files:" .. filesRead .. " Parsed:" .. totalParsed .. " Start:" .. firstChars
-            setStatus(msg, "none")
-        end
+        -- Always show this info
+        setStatus("Files:" .. files.Length .. " First5:" .. firstChars, "xml")
     end
 
-    if #ITEMS.items == 0 then
-        setStatus("0 items (see details above)", "none")
-    end
-
-    print("[ITEMS] Loaded from: " .. tostring(loadedFolder) .. " (" .. tostring(loadedMode) .. ")")
-    print("[ITEMS] Loaded successfully, total items: " .. tostring(#ITEMS.items))
+    print("[ITEMS] Total items loaded: " .. tostring(#ITEMS.items))
 end
 
 function ITEMS.EnsureLoaded()
