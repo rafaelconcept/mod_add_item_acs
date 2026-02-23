@@ -41,7 +41,7 @@ function addItem:Init(window)
         end
 
         pcall(function()
-            local flags = BindingFlags.Instance | BindingFlags.Public
+            local flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
             local defType = defObj:GetType()
             local properties = defType:GetProperties(flags)
             
@@ -64,9 +64,24 @@ function addItem:Init(window)
                         
                         if okRead and value ~= nil then
                             local valStr = tostring(value)
-                            table.insert(props, {name = propName, value = valStr})
+                            table.insert(props, {name = "P:" .. propName, value = valStr})
                         end
                     end
+                end
+            end
+
+            -- Also read fields (public and private), since IL2CPP often stores data there
+            local fields = defType:GetFields(flags)
+            for i = 0, fields.Length - 1 do
+                local field = fields[i]
+                local fieldName = tostring(field.Name)
+                local value = nil
+                local okRead = pcall(function()
+                    value = field:GetValue(defObj)
+                end)
+                if okRead and value ~= nil then
+                    local valStr = tostring(value)
+                    table.insert(props, {name = "F:" .. fieldName, value = valStr})
                 end
             end
         end)
