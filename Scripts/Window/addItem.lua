@@ -184,30 +184,31 @@ function addItem:Init(window)
         end
     end
 
-    if #self.allItems == 0 then
+    -- Preload the first def directly from ThingMgr, no item click needed
+    local firstDefFromMgr = nil
+    pcall(function()
+        local allDefs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
+        if allDefs ~= nil and allDefs.Count > 0 then
+            firstDefFromMgr = allDefs[0]
+        end
+    end)
+
+    if firstDefFromMgr ~= nil then
+        self.debugProps = getAllProperties(firstDefFromMgr)
+        self.debugPropIndex = 1
+        self.debugItemName = "DirectDef[0]"
+    end
+
+    if #self.debugProps > 0 then
+        self:ShowDebugProps()
+    elseif #self.allItems == 0 then
         local msg = "No item defs loaded"
         if ITEMS ~= nil and ITEMS.lastLoadMessage ~= nil and ITEMS.lastLoadMessage ~= "" then
             msg = ITEMS.lastLoadMessage
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        -- Get first def DIRECTLY from ThingMgr without bias
-        local firstDefFromMgr = nil
-        pcall(function()
-            local allDefs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
-            if allDefs ~= nil and allDefs.Count > 0 then
-                firstDefFromMgr = allDefs[0]
-            end
-        end)
-        
-        if firstDefFromMgr ~= nil then
-            self.debugProps = getAllProperties(firstDefFromMgr)
-            self.debugPropIndex = 1
-            self.debugItemName = "DirectDef[0]"
-            self:ShowDebugProps()
-        else
-            self.pageLabel3.text = string.format("%s Show:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, skippedTemplate)
-        end
+        self.pageLabel3.text = string.format("%s Show:%d Tpl:%d", getDiagLabelText(), #self.allItems, skippedTemplate)
     end
 
     self.displayedItems = self.allItems
