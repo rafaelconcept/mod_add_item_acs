@@ -341,19 +341,15 @@ local function parseXmlNames(content, seen)
 
     local added = 0
 
-    for name in content:gmatch('<ThingDef[^>]-Name%s*=%s*"([^"]+)"') do
+    -- Match: <ThingDef Type="Item" Name="ItemName" ...>
+    for name in content:gmatch('Type%s*=%s*"Item"[^>]-Name%s*=%s*"([^"]+)"') do
         if pushName(name, seen) then
             added = added + 1
         end
     end
-
-    for name in content:gmatch("<ThingDef[^>]-Name%s*=%s*'([^']+)'") do
-        if pushName(name, seen) then
-            added = added + 1
-        end
-    end
-
-    for name in content:gmatch('<ThingDef[^>]*>%s*<Name>%s*([^<]+)%s*</Name>') do
+    
+    -- Also try reverse order: Name then Type
+    for name in content:gmatch('Name%s*=%s*"([^"]+)"[^>]-Type%s*=%s*"Item"') do
         if pushName(name, seen) then
             added = added + 1
         end
@@ -629,30 +625,35 @@ function ITEMS.OnInit()
     end
 
     if files == nil then
-        local msg = "No XMLs found. Tried " .. tostring(#triedFolders) .. " folders"
-        if #triedFolders > 0 then
-            msg = msg .. ": " .. triedFolders[1]
-        end
+        local msg = "No XMLs. Tried: " .. (triedFolders[1] or "?")
         setStatus(msg, "none")
     else
+        local totalParsed = 0
+        local filesRead = 0
         for i = 0, files.Length - 1 do
             local fullPath = files[i]
             local file = io.open(fullPath, "rb")
             if file ~= nil then
+                filesRead = filesRead + 1
                 local content = normalizeContent(file:read("*a"))
                 file:close()
-
-                parseXmlNames(content, seen)
+                
+                if content ~= nil and content ~= "" then
+                    local parsed = parseXmlNames(content, seen)
+                    totalParsed = totalParsed + parsed
+                end
             end
         end
 
         if #ITEMS.items > 0 then
-            setStatus("Loaded " .. tostring(#ITEMS.items) .. " items from: " .. loadedFolder, "xml")
+            setStatus("OK: " .. tostring(#ITEMS.items) .. " items from " .. filesRead .. " XMLs", "xml")
+        else
+            setStatus("Parsed " .. totalParsed .. " from " .. filesRead .. "/" .. files.Length .. " files", "none")
         end
     end
 
     if #ITEMS.items == 0 then
-        setStatus("No items parsed from " .. tostring(files and files.Length or 0) .. " XMLs", "none")
+        setStatus("0 items after parse. Check XML structure", "none")
     end
 
     print("[ITEMS] Loaded from: " .. tostring(loadedFolder) .. " (" .. tostring(loadedMode) .. ")")
