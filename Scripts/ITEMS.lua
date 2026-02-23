@@ -239,15 +239,42 @@ end
 local function getCandidateFolders()
     local folders = {}
 
+    -- Try relative paths first
+    table.insert(folders, "files/Settings/ThingDef/Item")
+    table.insert(folders, "files\\Settings\\ThingDef\\Item")
+    table.insert(folders, "Settings/ThingDef/Item")
+    table.insert(folders, "Settings\\ThingDef\\Item")
+    
+    -- Android persistent data path
+    local persistentDataPath = nil
+    pcall(function()
+        persistentDataPath = Application.persistentDataPath
+    end)
+    if persistentDataPath ~= nil and persistentDataPath ~= "" then
+        table.insert(folders, combinePath(persistentDataPath, "files", "Settings", "ThingDef", "Item"))
+        table.insert(folders, combinePath(persistentDataPath, "Settings", "ThingDef", "Item"))
+    end
+    
+    -- Game data path
+    local dataPath = nil
+    pcall(function()
+        dataPath = Application.dataPath
+    end)
+    if dataPath ~= nil and dataPath ~= "" then
+        table.insert(folders, combinePath(dataPath, "files", "Settings", "ThingDef", "Item"))
+        table.insert(folders, combinePath(dataPath, "Settings", "ThingDef", "Item"))
+    end
+    
+    -- Current working directory
     local cwd = nil
     pcall(function()
         cwd = Directory.GetCurrentDirectory()
     end)
     if cwd ~= nil and cwd ~= "" then
+        table.insert(folders, combinePath(cwd, "files", "Settings", "ThingDef", "Item"))
         table.insert(folders, combinePath(cwd, "Settings", "ThingDef", "Item"))
     end
 
-    -- Only use local Settings/ThingDef/Item folder
     return folders
 end
 
