@@ -239,6 +239,14 @@ end
 local function getCandidateFolders()
     local folders = {}
 
+    local cwd = nil
+    pcall(function()
+        cwd = Directory.GetCurrentDirectory()
+    end)
+    if cwd ~= nil and cwd ~= "" then
+        table.insert(folders, combinePath(cwd, "Settings", "ThingDef", "Item"))
+    end
+
     local persistentPath = nil
     local appId = nil
     pcall(function()
