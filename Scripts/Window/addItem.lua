@@ -78,6 +78,11 @@ function addItem:Init(window)
     -- Default hint
     self.inputNum.text = "1"
 
+    local loadedCount = 0
+    if XIAUXIAN_ITEMS ~= nil and XIAUXIAN_ITEMS.EnsureLoaded ~= nil then
+        loadedCount = XIAUXIAN_ITEMS.EnsureLoaded()
+    end
+
     self.allItems = {}
     for i, name in ipairs(XIAUXIAN_ITEMS.items) do
         if name ~= "" then
@@ -92,6 +97,10 @@ function addItem:Init(window)
                 })
             end
         end
+    end
+
+    if #self.allItems == 0 then
+        self.pageLabel3.text = string.format("No valid item definitions loaded (%d). Open this window after entering a save.", loadedCount)
     end
 
     self.displayedItems = self.allItems
