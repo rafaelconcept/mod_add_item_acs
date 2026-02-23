@@ -247,33 +247,7 @@ local function getCandidateFolders()
         table.insert(folders, combinePath(cwd, "Settings", "ThingDef", "Item"))
     end
 
-    local persistentPath = nil
-    local appId = nil
-    pcall(function()
-        persistentPath = Application.persistentDataPath
-    end)
-    pcall(function()
-        appId = Application.identifier
-    end)
-
-    print("[ITEMS] Application.identifier:", tostring(appId))
-    print("[ITEMS] Application.persistentDataPath:", tostring(persistentPath))
-
-    if persistentPath ~= nil and persistentPath ~= "" then
-        table.insert(folders, combinePath(persistentPath, "Settings", "ThingDef", "Item"))
-    end
-
-    if appId ~= nil and appId ~= "" then
-        local androidDataRoot = "/storage/emulated/0/Android/data/" .. appId .. "/files"
-        table.insert(folders, combinePath(androidDataRoot, "Settings", "ThingDef", "Item"))
-
-        local sdcardDataRoot = "/sdcard/Android/data/" .. appId .. "/files"
-        table.insert(folders, combinePath(sdcardDataRoot, "Settings", "ThingDef", "Item"))
-    end
-
-    table.insert(folders, "Settings/ThingDef/Item")
-    table.insert(folders, "Settings\\ThingDef\\Item")
-
+    -- Only use local Settings/ThingDef/Item folder
     return folders
 end
 
@@ -624,13 +598,7 @@ function ITEMS.OnInit()
             break
         end
 
-        local tryRecursiveFiles = getXmlFilesRecursive(folder)
-        if tryRecursiveFiles ~= nil and tryRecursiveFiles.Length > 0 then
-            loadedFolder = folder
-            files = tryRecursiveFiles
-            loadedMode = "recursive"
-            break
-        end
+        -- No recursive scan: only direct files in the folder
     end
 
     if files == nil then
@@ -643,11 +611,7 @@ function ITEMS.OnInit()
                 local content = normalizeContent(file:read("*a"))
                 file:close()
 
-                local before = #ITEMS.items
                 parseXmlNames(content, seen)
-                if #ITEMS.items == before then
-                    parseRawTokens(content, seen)
-                end
             end
         end
 
