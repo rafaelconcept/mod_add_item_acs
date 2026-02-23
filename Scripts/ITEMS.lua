@@ -630,6 +630,7 @@ function ITEMS.OnInit()
     else
         local totalParsed = 0
         local filesRead = 0
+        local firstChars = ""
         for i = 0, files.Length - 1 do
             local fullPath = files[i]
             local file = io.open(fullPath, "rb")
@@ -637,6 +638,11 @@ function ITEMS.OnInit()
                 filesRead = filesRead + 1
                 local content = normalizeContent(file:read("*a"))
                 file:close()
+                
+                -- Get first chars from first file
+                if i == 0 and content ~= nil and content ~= "" then
+                    firstChars = content:sub(1, 50):gsub("[^%w%s<>/=\"]", "?")
+                end
                 
                 if content ~= nil and content ~= "" then
                     local parsed = parseXmlNames(content, seen)
@@ -648,12 +654,13 @@ function ITEMS.OnInit()
         if #ITEMS.items > 0 then
             setStatus("OK: " .. tostring(#ITEMS.items) .. " items from " .. filesRead .. " XMLs", "xml")
         else
-            setStatus("Parsed " .. totalParsed .. " from " .. filesRead .. "/" .. files.Length .. " files", "none")
+            local msg = "Files:" .. filesRead .. " Parsed:" .. totalParsed .. " Start:" .. firstChars
+            setStatus(msg, "none")
         end
     end
 
     if #ITEMS.items == 0 then
-        setStatus("0 items after parse. Check XML structure", "none")
+        setStatus("0 items (see details above)", "none")
     end
 
     print("[ITEMS] Loaded from: " .. tostring(loadedFolder) .. " (" .. tostring(loadedMode) .. ")")
