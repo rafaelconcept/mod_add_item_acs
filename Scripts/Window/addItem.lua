@@ -184,19 +184,37 @@ function addItem:Init(window)
         end
     end
 
-    -- Preload the first def directly from ThingMgr, no item click needed
+    -- Preload using the first XML item name (ITEMS.items[1]) to avoid GetDefs timing issues
     local firstDefFromMgr = nil
     pcall(function()
-        local allDefs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
-        if allDefs ~= nil and allDefs.Count > 0 then
-            firstDefFromMgr = allDefs[0]
+        local firstName = nil
+        if ITEMS ~= nil and ITEMS.items ~= nil and #ITEMS.items > 0 then
+            firstName = ITEMS.items[1]
+        end
+        if firstName ~= nil and firstName ~= "" then
+            firstDefFromMgr = ThingMgr:GetDef(CS.XiaWorld.g_emThingType.Item, firstName)
         end
     end)
+
+    -- Fallback to ThingMgr:GetDefs if XML name was not resolvable
+    if firstDefFromMgr == nil then
+        pcall(function()
+            local allDefs = nil
+            if ThingMgr ~= nil and ThingMgr.GetDefs ~= nil then
+                allDefs = ThingMgr:GetDefs(CS.XiaWorld.g_emThingType.Item)
+            elseif ThingMgr ~= nil and ThingMgr.Instance ~= nil then
+                allDefs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
+            end
+            if allDefs ~= nil and allDefs.Count ~= nil and allDefs.Count > 0 then
+                firstDefFromMgr = allDefs[0]
+            end
+        end)
+    end
 
     if firstDefFromMgr ~= nil then
         self.debugProps = getAllProperties(firstDefFromMgr)
         self.debugPropIndex = 1
-        self.debugItemName = "DirectDef[0]"
+        self.debugItemName = "DirectDef[XML[1]]"
     end
 
     if #self.debugProps > 0 then
@@ -208,7 +226,7 @@ function addItem:Init(window)
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        self.pageLabel3.text = string.format("%s Show:%d Tpl:%d", getDiagLabelText(), #self.allItems, skippedTemplate)
+        self.pageLabel3.text = string.format("No direct def from ThingMgr | %s Show:%d Tpl:%d", getDiagLabelText(), #self.allItems, skippedTemplate)
     end
 
     self.displayedItems = self.allItems
