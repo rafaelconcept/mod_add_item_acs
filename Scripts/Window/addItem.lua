@@ -161,6 +161,7 @@ function addItem:Init(window)
     self.debugPropIndex = 1
     self.debugItemName = ""
     local skippedTemplate = 0
+    local itemCounter = 0
     
     for i, name in ipairs(ITEMS.items) do
         if name ~= "" and not isTemplateDefName(name) then
@@ -170,10 +171,11 @@ function addItem:Init(window)
             end)
             if okDef and def ~= nil then
                 local texPath = readField(def, "TexPath")
+                itemCounter = itemCounter + 1
 
                 table.insert(self.allItems, {
                     icon = texPath ~= "" and texPath or "thing://2,Item_SmallBell,Item_IronBlock",
-                    title = name,  -- Use internal name directly
+                    title = string.format("Item #%d", itemCounter),
                     itemName = name,
                 })
             end
@@ -189,7 +191,23 @@ function addItem:Init(window)
         end
         self.pageLabel3.text = string.format("%s | %s", msg, getDiagLabelText())
     else
-        self.pageLabel3.text = string.format("%s Show:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, skippedTemplate)
+        -- Get first def DIRECTLY from ThingMgr without bias
+        local firstDefFromMgr = nil
+        pcall(function()
+            local allDefs = ThingMgr.Instance:GetDefs(CS.XiaWorld.g_emThingType.Item)
+            if allDefs ~= nil and allDefs.Count > 0 then
+                firstDefFromMgr = allDefs[0]
+            end
+        end)
+        
+        if firstDefFromMgr ~= nil then
+            self.debugProps = getAllProperties(firstDefFromMgr)
+            self.debugPropIndex = 1
+            self.debugItemName = "DirectDef[0]"
+            self:ShowDebugProps()
+        else
+            self.pageLabel3.text = string.format("%s Show:%d Tpl:%d | Click item to debug props", getDiagLabelText(), #self.allItems, skippedTemplate)
+        end
     end
 
     self.displayedItems = self.allItems
