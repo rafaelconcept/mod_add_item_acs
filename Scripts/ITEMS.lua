@@ -634,7 +634,26 @@ function ITEMS.OnInit()
     local total = 0
     for k, v in pairs(data) do
         total = total + 1
-        if type(k) == "string" then
+        local name = nil
+        if v ~= nil then
+            pcall(function()
+                name = v.ThingName
+            end)
+            if name == nil or name == "" then
+                pcall(function()
+                    name = v.Name
+                end)
+            end
+            if name == nil or name == "" then
+                pcall(function()
+                    name = v.m_Name
+                end)
+            end
+        end
+
+        if name ~= nil and name ~= "" then
+            pushName(name, seen)
+        elseif type(k) == "string" then
             pushName(k, seen)
         elseif v ~= nil then
             pushNameFromDef(v, seen)
