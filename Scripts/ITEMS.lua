@@ -603,47 +603,46 @@ end
 function ITEMS.OnInit()
     ITEMS.items = {}
     ITEMS.runtimeCandidates = {}
-    ITEMS.lastLoadMessage = "Starting..."
+    ITEMS.lastLoadMessage = "Loading from ThingMgr..."
     ITEMS.lastSource = "init"
     local seen = {}
 
-    local loadedFolder = nil
-    local files = nil
-    
-    for _, folder in ipairs(getCandidateFolders()) do
-        local tryFiles = getXmlFiles(folder)
-        if tryFiles ~= nil and tryFiles.Length > 0 then
-            loadedFolder = folder
-            files = tryFiles
-            break
-        end
-    end
-
-    if files == nil then
-        ITEMS.lastLoadMessage = "No XML files found"
+    local mgr = nil
+    pcall(function()
+        mgr = CS.XiaWorld.ThingMgr.Instance
+    end)
+    if mgr == nil then
+        ITEMS.lastLoadMessage = "ThingMgr not available"
         return
     end
-    
-    local firstChars = ""
-    for i = 0, files.Length - 1 do
-        local fullPath = files[i]
-        local file = io.open(fullPath, "rb")
-        if file ~= nil then
-            local content = normalizeContent(file:read("*a"))
-            file:close()
-            
-            if i == 0 and content ~= nil and content ~= "" then
-                firstChars = content:sub(1, 5)
-            end
-            
-            if content ~= nil and content ~= "" then
-                parseXmlNames(content, seen)
-            end
+
+    local itemType = getItemType()
+    local ok, has, data = pcall(function()
+        return mgr.m_mapThingDefs:TryGetValue(itemType)
+    end)
+    if not ok or not has or data == nil then
+        ok, has, data = pcall(function()
+            return mgr.m_mapThingDefs:TryGetValue(2)
+        end)
+    end
+
+    if not ok or not has or data == nil then
+        ITEMS.lastLoadMessage = "ThingMgr: no Item defs"
+        return
+    end
+
+    local total = 0
+    for k, v in pairs(data) do
+        total = total + 1
+        if type(k) == "string" then
+            pushName(k, seen)
+        elseif v ~= nil then
+            pushNameFromDef(v, seen)
         end
     end
 
-    ITEMS.lastLoadMessage = "Files:" .. tostring(files.Length) .. " First5:[" .. firstChars .. "]"
-    ITEMS.lastSource = "xml"
+    ITEMS.lastLoadMessage = "ItemDefs total: " .. tostring(total)
+    ITEMS.lastSource = "thingmgr"
 end
 
 function ITEMS.EnsureLoaded()
