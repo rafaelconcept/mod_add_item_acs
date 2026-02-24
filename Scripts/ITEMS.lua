@@ -9,6 +9,7 @@ local BindingFlags = cs.System.Reflection.BindingFlags
 
 ITEMS = {
     items = {},
+    displayNames = {},
     lastLoadMessage = "",
     runtimeCandidates = {},
     lastSource = "init"
@@ -602,6 +603,7 @@ end
 
 function ITEMS.OnInit()
     ITEMS.items = {}
+    ITEMS.displayNames = {}
     ITEMS.runtimeCandidates = {}
     ITEMS.lastLoadMessage = "Loading from ThingMgr..."
     ITEMS.lastSource = "init"
@@ -634,29 +636,32 @@ function ITEMS.OnInit()
     local total = 0
     for k, v in pairs(data) do
         total = total + 1
-        local name = nil
-        if v ~= nil then
+        local id = nil
+        if type(k) == "string" then
+            id = k
+        elseif v ~= nil then
             pcall(function()
-                name = v.ThingName
+                id = v.Name
             end)
-            if name == nil or name == "" then
+            if id == nil or id == "" then
                 pcall(function()
-                    name = v.Name
-                end)
-            end
-            if name == nil or name == "" then
-                pcall(function()
-                    name = v.m_Name
+                    id = v.m_Name
                 end)
             end
         end
 
-        if name ~= nil and name ~= "" then
-            pushName(name, seen)
-        elseif type(k) == "string" then
-            pushName(k, seen)
-        elseif v ~= nil then
-            pushNameFromDef(v, seen)
+        if id ~= nil and id ~= "" then
+            pushName(id, seen)
+            local displayName = nil
+            if v ~= nil then
+                pcall(function()
+                    displayName = v.ThingName
+                end)
+            end
+            if displayName == nil or displayName == "" or tostring(displayName) == "LOST ITEM" then
+                displayName = id
+            end
+            ITEMS.displayNames[id] = tostring(displayName)
         end
     end
 

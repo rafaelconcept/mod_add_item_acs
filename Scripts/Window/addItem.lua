@@ -315,9 +315,14 @@ function addItem:Init(window)
                 local texPath = readField(def, "TexPath")
                 itemCounter = itemCounter + 1
 
+                local displayName = name
+                if ITEMS ~= nil and ITEMS.displayNames ~= nil and ITEMS.displayNames[name] ~= nil then
+                    displayName = ITEMS.displayNames[name]
+                end
+
                 table.insert(self.allItems, {
                     icon = texPath ~= "" and texPath or "thing://2,Item_SmallBell,Item_IronBlock",
-                    title = string.format("Item #%d", itemCounter),
+                    title = displayName,
                     itemName = name,
                 })
             end
