@@ -286,6 +286,18 @@ function addItem:Init(window)
     pcall(function()
         self.inputKeyY.text = ""
     end)
+    pcall(function()
+        self.inputItemName.promptText = "Enter item name"
+    end)
+    pcall(function()
+        self.inputKeyX.promptText = "X"
+    end)
+    pcall(function()
+        self.inputKeyY.promptText = "Y"
+    end)
+    pcall(function()
+        self.inputNum.promptText = "Count"
+    end)
 
     addItem:ArrowButton()
 
@@ -422,21 +434,9 @@ function addItem:Init(window)
     end)
 
     self.bntRefresh.onClick:Add(function()
-        -- If debugging props, show next property
-        if #self.debugProps > 0 then
-            self.debugPropIndex = self.debugPropIndex + 1
-            if self.debugPropIndex > #self.debugProps then
-                self.debugPropIndex = 1
-            end
-            self:ShowDebugProps()
-        else
-            -- Normal refresh behavior
-            if ITEMS ~= nil and ITEMS.OnInit ~= nil then
-                ITEMS.OnInit()
-            end
-            self.pageLabel3.text = getDiagLabelText()
-            self:ArrowButton()
-        end
+        -- Always refresh storage list
+        self:ArrowButton()
+        self.pageLabel3.text = "Storage list refreshed"
     end)
 
     self.list.onClickItem:Add(function(context)
@@ -693,9 +693,11 @@ function addItem:SearchItems()
     if keyword == nil or keyword == "" then
         self.displayedItems = self.allItems
     else
+        local keywordLower = string.lower(tostring(keyword))
         self.displayedItems = {}
         for _, item in ipairs(self.allItems) do
-            if string.find(item.title, keyword) then
+            local titleLower = string.lower(tostring(item.title))
+            if string.find(titleLower, keywordLower, 1, true) then
                 table.insert(self.displayedItems, item)
             end
         end
