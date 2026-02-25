@@ -132,6 +132,12 @@ function home:OnInit()
     addItem:Init(self)
     npcAttribute:Init(self, self.npc)
 
+    -- Ensure itemEditor exists
+    if itemEditor == nil then
+        print("[ERROR] itemEditor module failed to load, creating fallback")
+        dofile(GameMain:GetModPath("XiuXianAssistant") .. "/Scripts/Window/itemEditor.lua")
+    end
+
 end
 
 function home:setWuWei()
