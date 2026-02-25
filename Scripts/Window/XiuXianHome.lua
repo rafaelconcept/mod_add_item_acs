@@ -1,10 +1,29 @@
 local Windows = GameMain:GetMod("Windows")
 local home = Windows:CreateWindow("XiuXianHome")
 
--- Force load itemEditor module if not already loaded
+-- Force load itemEditor module BEFORE OnInit
+-- Strategy 1: require
 if itemEditor == nil then
     pcall(function()
-        require("itemEditor")
+        itemEditor = require("itemEditor")
+    end)
+end
+
+-- Strategy 2: dofile with mod path
+if itemEditor == nil then
+    pcall(function()
+        local modPath = GameMain:GetModPath("XiuXianAssistant")
+        if modPath then
+            local filePath = modPath .. "/Scripts/Window/itemEditor.lua"
+            dofile(filePath)
+        end
+    end)
+end
+
+-- Strategy 3: Direct local require (as index)
+if itemEditor == nil then
+    pcall(function()
+        dofile("Scripts/Window/itemEditor.lua")
     end)
 end
 
@@ -41,7 +60,13 @@ function home:OnInit()
     setText(self.bntClose, "Close")
     setText(self.wuwei, "Max Base Stats")
     setText(self.shuxing, "Max Skills")
-    self.label.text = string.format("Please select an NPC")
+    
+    -- Check if itemEditor loaded successfully
+    if itemEditor == nil then
+        self.label.text = "WARNING: itemEditor module not loaded!"
+    else
+        self.label.text = string.format("Please select an NPC")
+    end
 
     -- Track current mode (0=AddItems, 1=NpcAttributes, 2=ItemEditor)
     self.currentMode = 0
@@ -85,8 +110,12 @@ function home:OnInit()
     end
 
     local function switchToItemEditor()
-        if itemEditor == nil or itemEditor.Init == nil then
-            self.label.text = "Item Editor module not available"
+        if itemEditor == nil then
+            self.label.text = "ERROR: itemEditor = nil"
+            return
+        end
+        if itemEditor.Init == nil then
+            self.label.text = "ERROR: itemEditor.Init not found"
             return
         end
         
@@ -141,50 +170,11 @@ function home:OnInit()
     self.bntClose.onClick:Add(function()
         self:Hide()
     end)
-
     addItem:Init(self)
     npcAttribute:Init(self, self.npc)
-
-    -- Force load itemEditor if not already loaded
-    if itemEditor == nil or itemEditor.Init == nil then
-        -- Try multiple loading strategies
-        local loaded = false
-        
-        -- Strategy 1: require with different paths
-        pcall(function()
-            itemEditor = require("itemEditor")
-            loaded = true
-        end)
-        
-        -- Strategy 2: dofile with mod path
-        if not loaded or itemEditor == nil then
-            local modPath = GameMain:GetModPath("XiuXianAssistant")
-            if modPath then
-                pcall(function()
-                    dofile(modPath .. "/Scripts/Window/itemEditor.lua")
-                    loaded = itemEditor ~= nil
-                end)
-            end
-        end
-        
-        -- Strategy 3: loadfile with mod path
-        if not loaded or itemEditor == nil then
-            local modPath = GameMain:GetModPath("XiuXianAssistant")
-            if modPath then
-                pcall(function()
-                    local loader = loadfile(modPath .. "/Scripts/Window/itemEditor.lua")
-                    if loader then
-                        loader()
-                        loaded = itemEditor ~= nil
-                    end
-                end)
-            end
-        end
-        
-        if itemEditor == nil then
-            self.label.text = "ERROR: itemEditor module not loading"
-        end
-    end
+    
+    -- Initialize to Add Items mode
+    switchToAddItems()
 
 end
 
