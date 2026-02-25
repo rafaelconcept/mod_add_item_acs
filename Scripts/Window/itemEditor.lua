@@ -1,3 +1,4 @@
+-- Item Editor Module - must be global
 itemEditor = {}
 
 local BindingFlags = CS.System.Reflection.BindingFlags
@@ -595,3 +596,5 @@ function itemEditor:BuildAttributeEditor(window, thing)
 
     print("[Item Editor] Loaded " .. #self.attrEntries .. " attributes for item editing")
 end
+
+return itemEditor

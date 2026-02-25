@@ -118,6 +118,10 @@ function home:OnInit()
     self.bntNpcAttributes.onClick:Add(function()
         if self.currentMode == 1 then
             -- Currently in NPC mode, switch to Item Editor
+            if itemEditor == nil or itemEditor.Init == nil then
+                self.label.text = "Item Editor NOT LOADED"
+                return
+            end
             switchToItemEditor()
         else
             -- Not in NPC mode, switch to NPC
@@ -132,10 +136,19 @@ function home:OnInit()
     addItem:Init(self)
     npcAttribute:Init(self, self.npc)
 
-    -- Ensure itemEditor exists
-    if itemEditor == nil then
-        print("[ERROR] itemEditor module failed to load, creating fallback")
-        dofile(GameMain:GetModPath("XiuXianAssistant") .. "/Scripts/Window/itemEditor.lua")
+    -- Force load itemEditor if not already loaded
+    if itemEditor == nil or itemEditor.Init == nil then
+        -- Try to load itemEditor manually
+        local modPath = GameMain:GetModPath("XiuXianAssistant")
+        if modPath then
+            pcall(function()
+                dofile(modPath .. "/Scripts/Window/itemEditor.lua")
+            end)
+        end
+        
+        if itemEditor == nil then
+            self.label.text = "itemEditor FAILED TO LOAD - check file exists"
+        end
     end
 
 end
