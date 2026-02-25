@@ -36,33 +36,57 @@ function home:OnInit()
     setText(self.shuxing, "Max Skills")
     self.label.text = string.format("Please select an NPC")
 
-    -- Create 3rd button (Item Editor)
-    self.bntItemEditor = nil
-    pcall(function()
-        local btn2 = self.bntNpcAttributes
-        local newBtn = CS.FairyGUI.Object.Instantiate(btn2.displayObject)
-        if newBtn ~= nil then
-            newBtn.name = "bnt_3"
-            newBtn.x = btn2.x + btn2.width + 5
-            newBtn.y = btn2.y
-            self.window.contentPane:AddChild(newBtn)
-            self.bntItemEditor = newBtn
-            setText(self.bntItemEditor, "Item Editor")
-            print("[Item Editor] 3rd button created at x=" .. newBtn.x)
-        end
-    end)
+    -- Track if we're in Item Editor mode
+    self.isItemEditorMode = false
 
-    -- Add Items mode
+    -- Remove 3rd button code - not needed
+    self.bntItemEditor = nil
+
+    -- Add Items mode / Item Editor toggle
     self.bntAddItems.onClick:Add(function()
-        pcall(function()
-            self.controller.selectedIndex = 0
-        end)
-        self.label.text = string.format("Item Manager")
-        setText(self.wuwei, "Max Base Stats")
-        setText(self.shuxing, "Max Skills")
-        self.wuwei.onClick:Clear()
-        self.shuxing.onClick:Clear()
-        addItem:ArrowButton()
+        if self.isItemEditorMode then
+            -- Return to Add Items mode
+            self.isItemEditorMode = false
+            pcall(function()
+                self.controller.selectedIndex = 0
+            end)
+            setText(self.bntAddItems, "Add Items")
+            setText(self.wuwei, "Max Base Stats")
+            setText(self.shuxing, "Max Skills")
+            self.label.text = string.format("Item Manager")
+            self.wuwei.onClick:Clear()
+            self.shuxing.onClick:Clear()
+            addItem:ArrowButton()
+        else
+            -- Enter Item Editor mode
+            if itemEditor == nil or itemEditor.Init == nil then
+                self.label.text = "Item Editor module not available"
+                return
+            end
+            
+            self.isItemEditorMode = true
+            setText(self.bntAddItems, "← Back")
+            setText(self.wuwei, "Refresh Items")
+            setText(self.shuxing, "Reload Selected")
+            self.label.text = "Item Editor: click items to edit"
+            
+            self.wuwei.onClick:Clear()
+            self.shuxing.onClick:Clear()
+            self.wuwei.onClick:Add(function()
+                pcall(function()
+                    itemEditor:ReloadItems(self)
+                end)
+            end)
+            self.shuxing.onClick:Add(function()
+                pcall(function()
+                    itemEditor:ReloadSelected(self)
+                end)
+            end)
+
+            pcall(function()
+                itemEditor:Init(self)
+            end)
+        end
     end)
 
     -- NPC Attributes mode
@@ -86,41 +110,6 @@ function home:OnInit()
             self:setAttribute()
         end)
     end)
-
-    -- Item Editor mode
-    if self.bntItemEditor ~= nil then
-        self.bntItemEditor.onClick:Add(function()
-            if itemEditor == nil or itemEditor.Init == nil then
-                self.label.text = "Item Editor module not available"
-                return
-            end
-            
-            pcall(function()
-                self.controller.selectedIndex = 2
-            end)
-            
-            setText(self.wuwei, "Refresh Items")
-            setText(self.shuxing, "Reload Selected")
-            self.label.text = "Item Editor: search and select items"
-
-            self.wuwei.onClick:Clear()
-            self.shuxing.onClick:Clear()
-            self.wuwei.onClick:Add(function()
-                pcall(function()
-                    itemEditor:ReloadItems(self)
-                end)
-            end)
-            self.shuxing.onClick:Add(function()
-                pcall(function()
-                    itemEditor:ReloadSelected(self)
-                end)
-            end)
-
-            pcall(function()
-                itemEditor:Init(self)
-            end)
-        end)
-    end
 
     self.bntClose.onClick:Add(function()
         self:Hide()
