@@ -36,67 +36,32 @@ function home:OnInit()
     setText(self.shuxing, "Max Skills")
     self.label.text = string.format("Please select an NPC")
 
-    -- Track if we're in Item Editor mode
-    self.isItemEditorMode = false
+    -- Track current mode (0=AddItems, 1=NpcAttributes, 2=ItemEditor)
+    self.currentMode = 0
 
-    -- Remove 3rd button code - not needed
-    self.bntItemEditor = nil
+    local function switchToAddItems()
+        self.currentMode = 0
+        pcall(function()
+            self.controller.selectedIndex = 0
+        end)
+        setText(self.bntAddItems, "Add Items")
+        setText(self.wuwei, "Max Base Stats")
+        setText(self.shuxing, "Max Skills")
+        self.label.text = "Item Manager"
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
+        addItem:ArrowButton()
+    end
 
-    -- Add Items mode / Item Editor toggle
-    self.bntAddItems.onClick:Add(function()
-        if self.isItemEditorMode then
-            -- Return to Add Items mode
-            self.isItemEditorMode = false
-            pcall(function()
-                self.controller.selectedIndex = 0
-            end)
-            setText(self.bntAddItems, "Add Items")
-            setText(self.wuwei, "Max Base Stats")
-            setText(self.shuxing, "Max Skills")
-            self.label.text = string.format("Item Manager")
-            self.wuwei.onClick:Clear()
-            self.shuxing.onClick:Clear()
-            addItem:ArrowButton()
-        else
-            -- Enter Item Editor mode
-            if itemEditor == nil or itemEditor.Init == nil then
-                self.label.text = "Item Editor module not available"
-                return
-            end
-            
-            self.isItemEditorMode = true
-            setText(self.bntAddItems, "← Back")
-            setText(self.wuwei, "Refresh Items")
-            setText(self.shuxing, "Reload Selected")
-            self.label.text = "Item Editor: click items to edit"
-            
-            self.wuwei.onClick:Clear()
-            self.shuxing.onClick:Clear()
-            self.wuwei.onClick:Add(function()
-                pcall(function()
-                    itemEditor:ReloadItems(self)
-                end)
-            end)
-            self.shuxing.onClick:Add(function()
-                pcall(function()
-                    itemEditor:ReloadSelected(self)
-                end)
-            end)
-
-            pcall(function()
-                itemEditor:Init(self)
-            end)
-        end
-    end)
-
-    -- NPC Attributes mode
-    self.bntNpcAttributes.onClick:Add(function()
+    local function switchToNpcAttributes()
+        self.currentMode = 1
         pcall(function()
             self.controller.selectedIndex = 1
         end)
-        self.label.text = string.format("Please select an NPC")
+        setText(self.bntAddItems, "Add Items")
         setText(self.wuwei, "Max Base Stats")
         setText(self.shuxing, "Max Skills")
+        self.label.text = "Please select an NPC"
         
         self.npcList = self:GetChild("npcList")
         self:GetAllNpc()
@@ -109,6 +74,55 @@ function home:OnInit()
         self.shuxing.onClick:Add(function()
             self:setAttribute()
         end)
+    end
+
+    local function switchToItemEditor()
+        if itemEditor == nil or itemEditor.Init == nil then
+            self.label.text = "Item Editor module not available"
+            return
+        end
+        
+        self.currentMode = 2
+        pcall(function()
+            self.controller.selectedIndex = 2
+        end)
+        setText(self.bntAddItems, "Add Items")
+        setText(self.wuwei, "Refresh Items")
+        setText(self.shuxing, "Reload Selected")
+        self.label.text = "Item Editor: click items to edit"
+
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
+        self.wuwei.onClick:Add(function()
+            pcall(function()
+                itemEditor:ReloadItems(self)
+            end)
+        end)
+        self.shuxing.onClick:Add(function()
+            pcall(function()
+                itemEditor:ReloadSelected(self)
+            end)
+        end)
+
+        pcall(function()
+            itemEditor:Init(self)
+        end)
+    end
+
+    -- Add Items button - stays as Add Items, always goes to state 0
+    self.bntAddItems.onClick:Add(function()
+        switchToAddItems()
+    end)
+
+    -- NPC Attributes button - toggle between NPC and Item Editor
+    self.bntNpcAttributes.onClick:Add(function()
+        if self.currentMode == 1 then
+            -- Currently in NPC mode, switch to Item Editor
+            switchToItemEditor()
+        else
+            -- Not in NPC mode, switch to NPC
+            switchToNpcAttributes()
+        end
     end)
 
     self.bntClose.onClick:Add(function()
