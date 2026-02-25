@@ -24,6 +24,7 @@ function home:OnInit()
     self.title.text = string.format("XiuXian Assistant")
     self.bntAddItems = self:GetChild("bnt_1")
     self.bntNpcAttributes = self:GetChild("bnt_2")
+    self.bntItemEditor = self:GetChild("bnt_3")
     self.bntClose = self:GetChild("close")
     self.label = self:GetChild("label")
     self.wuwei = self:GetChild("wuwei")
@@ -31,31 +32,101 @@ function home:OnInit()
 
     setText(self.bntAddItems, "Add Items")
     setText(self.bntNpcAttributes, "NPC Attributes")
+    if self.bntItemEditor ~= nil then
+        setText(self.bntItemEditor, "Item Editor")
+    end
     setText(self.bntClose, "Close")
     setText(self.wuwei, "Max Base Stats")
     setText(self.shuxing, "Max Skills")
     self.label.text = string.format("Please select an NPC")
 
-    self.bntAddItems.onClick:Add(function()
-        addItem:ArrowButton()
-        self.controller.selectedIndex = 0
-    end)
+    if self.bntItemEditor == nil then
+        local cloned = nil
+        pcall(function()
+            cloned = CS.FairyGUI.Object.Instantiate(self.bntNpcAttributes)
+        end)
+        if cloned ~= nil then
+            pcall(function()
+                cloned.name = "bnt_3_dynamic"
+                cloned.x = self.bntNpcAttributes.x + self.bntNpcAttributes.width + 8
+                cloned.y = self.bntNpcAttributes.y
+                self.window.contentPane:AddChild(cloned)
+            end)
+            self.bntItemEditor = cloned
+            setText(self.bntItemEditor, "Item Editor")
+        end
+    end
 
-    self.bntNpcAttributes.onClick:Add(function()
-        self.controller.selectedIndex = 1
+    local function showNpcMode()
+        pcall(function()
+            self.controller.selectedIndex = 1
+        end)
         self.label.text = string.format("Please select an NPC")
+        setText(self.wuwei, "Max Base Stats")
+        setText(self.shuxing, "Max Skills")
 
-        --self.npcList = self.window.contentPane:GetChild("npcList")
         self.npcList = self:GetChild("npcList")
-        print("[XiuXian Assistant npcList]======>>>>", self.npcList)
         self:GetAllNpc()
+
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
         self.wuwei.onClick:Add(function()
             self:setWuWei()
         end)
         self.shuxing.onClick:Add(function()
             self:setAttribute()
         end)
+    end
+
+    local function showItemEditorMode()
+        if itemEditor == nil or itemEditor.Init == nil then
+            self.label.text = "Item Editor module not available"
+            return
+        end
+
+        pcall(function()
+            self.controller.selectedIndex = 2
+        end)
+        if self.controller.selectedIndex ~= 2 then
+            pcall(function()
+                self.controller.selectedIndex = 1
+            end)
+        end
+
+        setText(self.wuwei, "Refresh Items")
+        setText(self.shuxing, "Reload Selected")
+        self.label.text = "Item Editor: select an item from map list"
+
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
+        self.wuwei.onClick:Add(function()
+            itemEditor:ReloadItems(self)
+        end)
+        self.shuxing.onClick:Add(function()
+            itemEditor:ReloadSelected(self)
+        end)
+
+        itemEditor:Init(self)
+    end
+
+    self.bntAddItems.onClick:Add(function()
+        addItem:ArrowButton()
+        self.controller.selectedIndex = 0
+        setText(self.wuwei, "Max Base Stats")
+        setText(self.shuxing, "Max Skills")
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
     end)
+
+    self.bntNpcAttributes.onClick:Add(function()
+        showNpcMode()
+    end)
+
+    if self.bntItemEditor ~= nil then
+        self.bntItemEditor.onClick:Add(function()
+            showItemEditorMode()
+        end)
+    end
 
     self.bntClose.onClick:Add(function()
         self:Hide()
