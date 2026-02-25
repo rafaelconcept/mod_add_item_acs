@@ -24,7 +24,6 @@ function home:OnInit()
     self.title.text = string.format("XiuXian Assistant")
     self.bntAddItems = self:GetChild("bnt_1")
     self.bntNpcAttributes = self:GetChild("bnt_2")
-    self.bntItemEditor = self:GetChild("bnt_3")
     self.bntClose = self:GetChild("close")
     self.label = self:GetChild("label")
     self.wuwei = self:GetChild("wuwei")
@@ -32,38 +31,40 @@ function home:OnInit()
 
     setText(self.bntAddItems, "Add Items")
     setText(self.bntNpcAttributes, "NPC Attributes")
-    if self.bntItemEditor ~= nil then
-        setText(self.bntItemEditor, "Item Editor")
-    end
     setText(self.bntClose, "Close")
     setText(self.wuwei, "Max Base Stats")
     setText(self.shuxing, "Max Skills")
     self.label.text = string.format("Please select an NPC")
 
-    if self.bntItemEditor == nil then
-        local cloned = nil
+    -- Mode tracking (0=AddItems, 1=NpcAttributes, 2=ItemEditor)
+    self.currentMode = 0
+    self.bntItemEditor = nil
+
+    function self:showAddItemsMode()
+        self.currentMode = 0
         pcall(function()
-            cloned = CS.FairyGUI.Object.Instantiate(self.bntNpcAttributes)
+            self.controller.selectedIndex = 0
         end)
-        if cloned ~= nil then
-            pcall(function()
-                cloned.name = "bnt_3_dynamic"
-                cloned.x = self.bntNpcAttributes.x + self.bntNpcAttributes.width + 8
-                cloned.y = self.bntNpcAttributes.y
-                self.window.contentPane:AddChild(cloned)
-            end)
-            self.bntItemEditor = cloned
-            setText(self.bntItemEditor, "Item Editor")
-        end
+        self.label.text = string.format("Item Manager - Click 'Add Items' to proceed")
+        setText(self.wuwei, "Max Base Stats")
+        setText(self.shuxing, "Max Skills")
+        setText(self.bntNpcAttributes, "NPC Attributes →")
+        
+        self.wuwei.onClick:Clear()
+        self.shuxing.onClick:Clear()
+        
+        addItem:ArrowButton()
     end
 
-    local function showNpcMode()
+    function self:showNpcMode()
+        self.currentMode = 1
         pcall(function()
             self.controller.selectedIndex = 1
         end)
         self.label.text = string.format("Please select an NPC")
         setText(self.wuwei, "Max Base Stats")
         setText(self.shuxing, "Max Skills")
+        setText(self.bntNpcAttributes, "→ NPC Attr / Item Ed →")
 
         self.npcList = self:GetChild("npcList")
         self:GetAllNpc()
@@ -78,55 +79,59 @@ function home:OnInit()
         end)
     end
 
-    local function showItemEditorMode()
+    function self:showItemEditorMode()
+        self.currentMode = 2
         if itemEditor == nil or itemEditor.Init == nil then
             self.label.text = "Item Editor module not available"
+            print("[Item Editor Mode] Module not loaded")
             return
         end
 
+        -- Try to switch to state 2, but don't fail if it doesn't exist
         pcall(function()
             self.controller.selectedIndex = 2
         end)
-        if self.controller.selectedIndex ~= 2 then
-            pcall(function()
-                self.controller.selectedIndex = 1
-            end)
-        end
-
+        
         setText(self.wuwei, "Refresh Items")
         setText(self.shuxing, "Reload Selected")
+        setText(self.bntNpcAttributes, "← Back")
         self.label.text = "Item Editor: select an item from map list"
 
         self.wuwei.onClick:Clear()
         self.shuxing.onClick:Clear()
         self.wuwei.onClick:Add(function()
-            itemEditor:ReloadItems(self)
+            pcall(function()
+                itemEditor:ReloadItems(self)
+            end)
         end)
         self.shuxing.onClick:Add(function()
-            itemEditor:ReloadSelected(self)
+            pcall(function()
+                itemEditor:ReloadSelected(self)
+            end)
         end)
 
-        itemEditor:Init(self)
+        pcall(function()
+            itemEditor:Init(self)
+        end)
     end
 
     self.bntAddItems.onClick:Add(function()
-        addItem:ArrowButton()
-        self.controller.selectedIndex = 0
-        setText(self.wuwei, "Max Base Stats")
-        setText(self.shuxing, "Max Skills")
-        self.wuwei.onClick:Clear()
-        self.shuxing.onClick:Clear()
+        if self.currentMode == 0 then
+            self:showNpcMode()
+        else
+            self:showAddItemsMode()
+        end
     end)
 
     self.bntNpcAttributes.onClick:Add(function()
-        showNpcMode()
+        if self.currentMode == 1 then
+            self:showItemEditorMode()
+        elseif self.currentMode == 2 then
+            self:showNpcMode()
+        else
+            self:showNpcMode()
+        end
     end)
-
-    if self.bntItemEditor ~= nil then
-        self.bntItemEditor.onClick:Add(function()
-            showItemEditorMode()
-        end)
-    end
 
     self.bntClose.onClick:Add(function()
         self:Hide()
@@ -134,6 +139,9 @@ function home:OnInit()
 
     addItem:Init(self)
     npcAttribute:Init(self, self.npc)
+    
+    -- Initialize to Add Items mode
+    self:showAddItemsMode()
 
 end
 
