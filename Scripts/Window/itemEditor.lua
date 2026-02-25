@@ -595,5 +595,3 @@ function itemEditor:BuildAttributeEditor(window, thing)
 
     print("[Item Editor] Loaded " .. #self.attrEntries .. " attributes for item editing")
 end
-
-return itemEditor
