@@ -281,39 +281,7 @@ function itemEditor:BuildAttributeEditor(window, thing)
     print("[Item Editor] Loaded " .. #self.attrEntries .. " attributes for item editing")
 end
 
-return itemEditor
-
-    if thing == nil then
-        return "Unknown"
-    end
-
-    local displayName = nil
-    local idName = nil
-
-    pcall(function()
-        if thing.def ~= nil then
-            displayName = thing.def.ThingName
-            idName = thing.def.Name
-        end
-    end)
-
-    local displayText = toText(displayName)
-    local idText = toText(idName)
-
-    if displayText == "" or displayText == "LOST ITEM" then
-        if idText ~= "" then
-            return idText
-        end
-        return "Unknown"
-    end
-
-    if idText ~= "" and idText ~= displayText then
-        return string.format("%s (%s)", displayText, idText)
-    end
-    return displayText
-end
-
-local function getThingMapKey(thing)
+local function getThingDisplayName(thing)
     local mapKey = nil
     pcall(function()
         mapKey = thing.Key

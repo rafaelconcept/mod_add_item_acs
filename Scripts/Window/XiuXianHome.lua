@@ -1,6 +1,13 @@
 local Windows = GameMain:GetMod("Windows")
 local home = Windows:CreateWindow("XiuXianHome")
 
+-- Force load itemEditor module if not already loaded
+if itemEditor == nil then
+    pcall(function()
+        require("itemEditor")
+    end)
+end
+
 function home:OnInit()
     local function setText(target, value)
         if target == nil then
@@ -138,16 +145,42 @@ function home:OnInit()
 
     -- Force load itemEditor if not already loaded
     if itemEditor == nil or itemEditor.Init == nil then
-        -- Try to load itemEditor manually
-        local modPath = GameMain:GetModPath("XiuXianAssistant")
-        if modPath then
-            pcall(function()
-                dofile(modPath .. "/Scripts/Window/itemEditor.lua")
-            end)
+        -- Try multiple loading strategies
+        local loaded = false
+        
+        -- Strategy 1: require with different paths
+        pcall(function()
+            itemEditor = require("itemEditor")
+            loaded = true
+        end)
+        
+        -- Strategy 2: dofile with mod path
+        if not loaded or itemEditor == nil then
+            local modPath = GameMain:GetModPath("XiuXianAssistant")
+            if modPath then
+                pcall(function()
+                    dofile(modPath .. "/Scripts/Window/itemEditor.lua")
+                    loaded = itemEditor ~= nil
+                end)
+            end
+        end
+        
+        -- Strategy 3: loadfile with mod path
+        if not loaded or itemEditor == nil then
+            local modPath = GameMain:GetModPath("XiuXianAssistant")
+            if modPath then
+                pcall(function()
+                    local loader = loadfile(modPath .. "/Scripts/Window/itemEditor.lua")
+                    if loader then
+                        loader()
+                        loaded = itemEditor ~= nil
+                    end
+                end)
+            end
         end
         
         if itemEditor == nil then
-            self.label.text = "itemEditor FAILED TO LOAD - check file exists"
+            self.label.text = "ERROR: itemEditor module not loading"
         end
     end
 
