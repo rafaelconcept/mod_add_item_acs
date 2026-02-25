@@ -9,6 +9,15 @@ local function toText(value)
     return tostring(value)
 end
 
+-- Helper to format item display with location
+local function formatItemDisplay(thing)
+    local title = getThingDisplayName(thing)
+    local mapKey = getThingMapKey(thing)
+    local x, y = keyToXY(mapKey)
+    local coords = (x and y) and string.format("(%d,%d)", x, y) or "(?)"
+    return string.format("%s %s", title, coords)
+end
+
 local function getThingDisplayName(thing)
     if thing == nil then
         return "Unknown"
@@ -115,20 +124,16 @@ local function convertInput(rawText, typeName)
 end
 
 function itemEditor:Init(window)
-    local contentPane = window.window.contentPane
-    local npcUI = contentPane:GetChild("npcUI")
-    local root = npcUI:GetChildAt(0)
-
-    self.nameColumn = root:GetChild("n30")
-    self.valueColumn = root:GetChild("n31")
-    self.actionColumn = root:GetChild("n32")
-    self.listWidget = window:GetChild("npcList")
-
     self.windowRef = window
     self.mapItems = {}
+    self.filteredItems = {}
     self.attrEntries = {}
     self.currentThing = nil
-
+    self.searchQuery = ""
+    
+    -- Use npcList as the item list widget
+    self.listWidget = window:GetChild("npcList")
+    
     self:ReloadItems(window)
 end
 
@@ -139,6 +144,7 @@ function itemEditor:ReloadItems(window)
 
     self.listWidget:RemoveChildrenToPool()
     self.mapItems = {}
+    self.filteredItems = {}
 
     local itemList = nil
     local otherList = nil
@@ -163,27 +169,73 @@ function itemEditor:ReloadItems(window)
     appendThings(itemList)
     appendThings(otherList)
 
-    for index, thing in ipairs(self.mapItems) do
+    -- Apply filtering if search query exists
+    self.filteredItems = self:FilterItems(self.searchQuery)
+    self:RenderItemList(window)
+end
+
+function itemEditor:FilterItems(searchQuery)
+    local query = string.lower(tostring(searchQuery or ""))
+    local result = {}
+    
+    if query == "" then
+        return self.mapItems
+    end
+    
+    for _, thing in ipairs(self.mapItems) do
+        local displayName = string.lower(getThingDisplayName(thing))
+        if string.find(displayName, query, 1, true) then
+            table.insert(result, thing)
+        end
+    end
+    
+    return result
+end
+
+function itemEditor:RenderItemList(window)
+    self.listWidget:RemoveChildrenToPool()
+    
+    local itemsToShow = (#self.filteredItems > 0 or self.searchQuery ~= "") and self.filteredItems or self.mapItems
+    
+    for index, thing in ipairs(itemsToShow) do
         local item = self.listWidget:AddItemFromPool()
         local title = getThingDisplayName(thing)
-        item.title = string.format("%d: %s", index, title)
+        
+        -- Get coordinates for later
+        local mapKey = getThingMapKey(thing)
+        local x, y = keyToXY(mapKey)
 
+        item.title = title
+        
         item.onClick:Clear()
         item.onClick:Add(function()
             self.currentThing = thing
             self:BuildAttributeEditor(window, thing)
-
-            local mapKey = getThingMapKey(thing)
-            local x, y = keyToXY(mapKey)
+            
+            -- Show full info (name + location) when selected
             if x ~= nil and y ~= nil then
-                window.label.text = string.format("Selected item: %s @ (%d,%d)", title, x, y)
+                window.label.text = string.format("✓ %s @ (%d,%d) | %d attrs", title, x, y, #self.attrEntries)
             else
-                window.label.text = string.format("Selected item: %s", title)
+                window.label.text = string.format("✓ %s | %d attrs", title, #self.attrEntries)
             end
         end)
     end
 
-    window.label.text = string.format("Item Editor: %d map items", #self.mapItems)
+    local count = #itemsToShow
+    local msg = string.format("Items: %d item(s)", count)
+    if self.searchQuery ~= "" then
+        msg = string.format("Items: %d/%d found", #self.filteredItems, #self.mapItems)
+    end
+    
+    if window.label then
+        window.label.text = msg
+    end
+end
+
+function itemEditor:SearchItems(window, query)
+    self.searchQuery = query or ""
+    self.filteredItems = self:FilterItems(self.searchQuery)
+    self:RenderItemList(window)
 end
 
 function itemEditor:ReloadSelected(window)
@@ -199,9 +251,6 @@ function itemEditor:BuildAttributeEditor(window, thing)
         return
     end
 
-    self.nameColumn:RemoveChildrenToPool()
-    self.valueColumn:RemoveChildrenToPool()
-    self.actionColumn:RemoveChildrenToPool()
     self.attrEntries = {}
 
     local function addEntry(entry)
@@ -238,7 +287,7 @@ function itemEditor:BuildAttributeEditor(window, thing)
                 if okRead and value ~= nil then
                     local typeName = tostring(prop.PropertyType.FullName)
                     addEntry({
-                        name = "P:" .. tostring(prop.Name),
+                        name = tostring(prop.Name),
                         typeName = typeName,
                         valueText = toText(value),
                         apply = function(v)
@@ -259,7 +308,7 @@ function itemEditor:BuildAttributeEditor(window, thing)
             if okRead and value ~= nil then
                 local typeName = tostring(field.FieldType.FullName)
                 addEntry({
-                    name = "F:" .. tostring(field.Name),
+                    name = tostring(field.Name),
                     typeName = typeName,
                     valueText = toText(value),
                     apply = function(v)
@@ -270,46 +319,18 @@ function itemEditor:BuildAttributeEditor(window, thing)
         end
     end)
 
-    local maxRows = math.min(#self.attrEntries, 80)
-    for index = 1, maxRows do
-        local entry = self.attrEntries[index]
+    -- Sort entries by name for readability
+    table.sort(self.attrEntries, function(a, b)
+        return a.name < b.name
+    end)
 
-        local nameItem = self.nameColumn:AddItemFromPool()
-        local typeLabel = entry.typeName
-        if string.len(typeLabel) > 24 then
-            typeLabel = string.sub(typeLabel, 1, 24) .. "..."
-        end
-        nameItem:GetChild("label").text = string.format("%d) %s", index, entry.name)
-
-        local valueItem = self.valueColumn:AddItemFromPool()
-        local valueInput = valueItem:GetChild("title")
-        valueInput.text = tostring(entry.valueText)
-
-        local actionItem = self.actionColumn:AddItemFromPool()
-        actionItem.title = "Apply"
-        actionItem.onClick:Clear()
-        actionItem.onClick:Add(function()
-            local converted = convertInput(valueInput.text, entry.typeName)
-            if converted == nil then
-                window.label.text = string.format("Invalid value for %s", entry.name)
-                return
-            end
-
-            local okApply = pcall(function()
-                entry.apply(converted)
-            end)
-
-            if okApply then
-                window.label.text = string.format("Updated %s", entry.name)
-            else
-                window.label.text = string.format("Failed to update %s", entry.name)
-            end
-        end)
+    -- Update label to show attribute count
+    if window.label then
+        local title = getThingDisplayName(thing)
+        window.label.text = string.format("Editing: %s | %d editable attributes", title, #self.attrEntries)
     end
 
-    if #self.attrEntries == 0 then
-        window.label.text = "No editable simple attributes found for selected item"
-    end
+    print("[Item Editor] Loaded " .. #self.attrEntries .. " attributes for item editing")
 end
 
 return itemEditor
