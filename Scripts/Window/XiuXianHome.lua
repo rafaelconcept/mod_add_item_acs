@@ -66,6 +66,7 @@ function home:OnInit()
             self.controller.selectedIndex = 1
         end)
         setText(self.bntAddItems, "Add Items")
+        setText(self.bntNpcAttributes, "→ Item Editor")
         setText(self.wuwei, "Max Base Stats")
         setText(self.shuxing, "Max Skills")
         self.label.text = "Please select an NPC"
@@ -94,6 +95,7 @@ function home:OnInit()
             self.controller.selectedIndex = 2
         end)
         setText(self.bntAddItems, "Add Items")
+        setText(self.bntNpcAttributes, "← Back to NPC")
         setText(self.wuwei, "Refresh Items")
         setText(self.shuxing, "Reload Selected")
         self.label.text = "Item Editor: click items to edit"
